@@ -14,7 +14,7 @@ import { banner, log } from "../src/shared/logger.ts";
 
 function reseed(): void {
   banner("STEP 1 · Seed a Meta TEST account (no live spend)");
-  execSync("node --experimental-strip-types --no-warnings src/db/seed.ts", { stdio: "inherit" });
+  execSync("node --experimental-strip-types --experimental-sqlite --no-warnings src/db/seed.ts", { stdio: "inherit" });
 }
 
 async function main(): Promise<void> {

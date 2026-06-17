@@ -8,10 +8,10 @@
     "node": ">=22.6.0"
   },
   "scripts": {
-    "seed": "node --experimental-strip-types --no-warnings src/db/seed.ts",
-    "loop": "node --experimental-strip-types --no-warnings src/worker/loop.ts",
-    "demo": "node --experimental-strip-types --no-warnings scripts/demo.ts",
-    "serve": "node --experimental-strip-types --no-warnings src/api/server.ts",
+    "seed": "node --experimental-strip-types --experimental-sqlite --no-warnings src/db/seed.ts",
+    "loop": "node --experimental-strip-types --experimental-sqlite --no-warnings src/worker/loop.ts",
+    "demo": "node --experimental-strip-types --experimental-sqlite --no-warnings scripts/demo.ts",
+    "serve": "node --experimental-strip-types --experimental-sqlite --no-warnings src/api/server.ts",
     "start": "npm run seed && npm run serve"
   },
   "dependencies": {},

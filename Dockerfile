@@ -11,4 +11,4 @@ ENV NODE_ENV=production \
 EXPOSE 8787
 
 # The server migrates + seeds-on-boot if the DB is empty, then serves the dashboard + API.
-CMD ["node", "--experimental-strip-types", "--no-warnings", "src/api/server.ts"]
+CMD ["node", "--experimental-strip-types", "--experimental-sqlite", "--no-warnings", "src/api/server.ts"]
