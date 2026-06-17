@@ -1,0 +1,10 @@
+node_modules
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
+.git
+.github
+.DS_Store
+scripts/_*.ts

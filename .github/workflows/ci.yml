@@ -1,0 +1,24 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+      - name: Seed + run the OODA loop (no deps, dry-run)
+        run: |
+          node --experimental-strip-types --no-warnings src/db/seed.ts
+          node --experimental-strip-types --no-warnings src/worker/loop.ts
+      - name: Boot the server and hit the health check
+        run: |
+          node --experimental-strip-types --no-warnings src/api/server.ts &
+          SRV=$!
+          sleep 3
+          curl -fsS http://localhost:8787/api/accounts > /dev/null && echo "health OK"
+          kill $SRV

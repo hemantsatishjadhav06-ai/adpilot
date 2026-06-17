@@ -1,0 +1,13 @@
+# Render Blueprint — one-click deploy of the AdPilot dashboard + API.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: adpilot
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/accounts
+    autoDeploy: true
+    envVars:
+      - key: ADPILOT_DRY_RUN
+        value: "1"            # writes are simulated — never sent to a live ad account

@@ -1,0 +1,19 @@
+{
+  "name": "adpilot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AdPilot — Autonomous AI Performance-Marketing Engine (Phase 0→1 runnable MVP, Meta, Co-pilot mode)",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "seed": "node --experimental-strip-types --no-warnings src/db/seed.ts",
+    "loop": "node --experimental-strip-types --no-warnings src/worker/loop.ts",
+    "demo": "node --experimental-strip-types --no-warnings scripts/demo.ts",
+    "serve": "node --experimental-strip-types --no-warnings src/api/server.ts",
+    "start": "npm run seed && npm run serve"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
