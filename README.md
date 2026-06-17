@@ -1,5 +1,7 @@
 # AdPilot — Autonomous AI Performance‑Marketing Engine
 
+[![ci](https://github.com/hemantsatishjadhav06-ai/adpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/hemantsatishjadhav06-ai/adpilot/actions/workflows/ci.yml) · **Live:** https://adpilot-nhro.onrender.com
+
 **Runnable Phase 0 → Phase 1 MVP**, built from the 8‑document specification.
 
 > One‑liner: takes a client brief and runs, optimises, and iterates Meta PPC
