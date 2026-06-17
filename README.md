@@ -20,7 +20,7 @@ TypeScript execution and the built‑in `node:sqlite`).
 
 ## Live demo & deploy
 
-**Live app:** _Render URL is added here right after the first deploy completes._ · _(Render free tier — first hit after idle may take ~40s to wake)_
+**Live app:** **https://adpilot-nhro.onrender.com** · _(Render free tier — first hit after idle may take ~40s to wake)_
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/hemantsatishjadhav06-ai/adpilot)
 
