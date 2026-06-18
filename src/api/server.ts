@@ -21,9 +21,23 @@ const INDEX = join(import.meta.dirname, "..", "web", "index.html");
 
 const json = (res: import("node:http").ServerResponse, code: number, body: unknown) => {
   const s = JSON.stringify(body);
-  res.writeHead(code, { "content-type": "application/json", "access-control-allow-origin": "*" });
+  res.writeHead(code, {
+    "content-type": "application/json",
+    "access-control-allow-origin": "*",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "no-referrer",
+  });
   res.end(s);
 };
+
+// Serialise all DB writes through a single in-process lock so concurrent
+// run-loop / approve requests can't contend on SQLite (single-writer).
+let writeLock: Promise<unknown> = Promise.resolve();
+function withLock<T>(fn: () => Promise<T>): Promise<T> {
+  const next = writeLock.then(fn, fn);
+  writeLock = next.then(() => undefined, () => undefined);
+  return next;
+}
 
 function mapAction(r: Record<string, unknown>): Record<string, unknown> {
   const j = (k: string) => { try { return JSON.parse((r[k] as string) ?? "null"); } catch { return null; } };
@@ -81,10 +95,12 @@ const server = createServer(async (req, res) => {
     const method = req.method ?? "GET";
 
     if (p === "/" || p === "/index.html") {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff" });
       res.end(readFileSync(INDEX, "utf8"));
       return;
     }
+    if (p === "/healthz") return json(res, 200, { ok: true, accounts: repo.listAccounts().length });
+    if (p === "/favicon.ico") { res.writeHead(204).end(); return; }
     if (p === "/api/accounts" && method === "GET") {
       const accts = repo.listAccounts().map((a) => {
         const counts = repo.countByStatus(a.id);
@@ -108,8 +124,12 @@ const server = createServer(async (req, res) => {
     if ((m = p.match(/^\/api\/accounts\/([^/]+)\/audit$/)) && method === "GET")
       return json(res, 200, repo.listAudit(m[1]));
     if ((m = p.match(/^\/api\/accounts\/([^/]+)\/run-loop$/)) && method === "POST") {
-      repo.clearAccountActions(m[1]);
-      const s = await runLoop(m[1]);
+      const acctId = m[1];
+      const s = await withLock(async () => {
+        repo.getAccountContext(acctId); // 404s if unknown
+        repo.clearUndecidedActions(acctId); // preserve decided history across re-runs
+        return runLoop(acctId);
+      });
       return json(res, 200, { ok: true, queued: s.queued, modified: s.modified, blocked: s.blocked, deferred: s.deferred, proposed: s.proposed });
     }
     if ((m = p.match(/^\/api\/accounts\/([^/]+)\/(kill|revive)$/)) && method === "POST") {
@@ -121,19 +141,23 @@ const server = createServer(async (req, res) => {
     }
     if ((m = p.match(/^\/api\/actions\/([^/]+)\/approve$/)) && method === "POST") {
       const body = await readBody(req);
-      const r = await approveAction(m[1], String(body.note ?? ""));
+      const id = m[1];
+      const r = await withLock(() => approveAction(id, String(body.note ?? "")));
       return json(res, 200, { ok: true, ...r });
     }
     if ((m = p.match(/^\/api\/actions\/([^/]+)\/reject$/)) && method === "POST") {
       const body = await readBody(req);
-      rejectAction(m[1], String(body.note ?? ""));
+      const id = m[1];
+      await withLock(async () => rejectAction(id, String(body.note ?? "")));
       return json(res, 200, { ok: true });
     }
 
     json(res, 404, { error: "not found", path: p });
   } catch (e) {
-    log.error("request error", { err: String(e) });
-    json(res, 500, { error: String(e) });
+    const status = e && typeof e === "object" && "status" in e ? Number((e as { status: number }).status) : 500;
+    const message = e instanceof Error ? e.message : String(e);
+    if (status >= 500) log.error("request error", { err: message });
+    json(res, status, { error: message });
   }
 });
 

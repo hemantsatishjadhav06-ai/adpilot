@@ -115,6 +115,21 @@ execute → audit → (rollback).
 
 ---
 
+## Tests
+
+```bash
+npm test     # invariant suite — no framework, exits non-zero on regression (gates CI)
+```
+
+Covers the guarantees the product depends on: the OODA loop's guardrail mix
+(5 queued / 1 modified / 1 blocked / 1 deferred), **the kill switch blocks both
+approval and execution** (even of an already-queued action — re-checked at the
+write boundary), double-approve / re-reject are conflicts, unknown account →
+404, loop re-runs preserve executed history, and the guardrail engine units
+(learning-phase edits blocked, +35 % scale capped to +25 %). HTTP concurrency is
+serialised through a write lock so parallel loop/approve requests can't contend
+on SQLite.
+
 ## What's mocked vs. the production spec (and how to graduate)
 
 This is an honest MVP, not the deployed SaaS. Deviations, each behind a clean seam:

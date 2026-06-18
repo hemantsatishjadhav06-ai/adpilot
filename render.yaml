@@ -6,7 +6,7 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /api/accounts
+    healthCheckPath: /healthz
     autoDeploy: true
     envVars:
       - key: ADPILOT_DRY_RUN

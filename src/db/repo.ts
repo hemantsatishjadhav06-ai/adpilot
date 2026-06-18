@@ -3,6 +3,7 @@
 // shared/types.ts. Every tenant query is scoped by org_id in code (Doc 04 §11).
 
 import { all, get, run, newId, nowIso } from "./client.ts";
+import { notFound } from "../shared/errors.ts";
 import type {
   AccountContext, GuardrailConfig, CampaignTree, CampaignNode, AdSetNode,
   AdNode, MetricSnapshot, ProposedAction, ObjectLevel,
@@ -51,7 +52,7 @@ export function getGuardrailConfig(orgId: string, acctId: string): GuardrailConf
 
 export function getAccountContext(acctId: string): AccountContext {
   const a = get<AcctRow>(`SELECT * FROM ad_accounts WHERE id=?`, [acctId]);
-  if (!a) throw new Error(`no account ${acctId}`);
+  if (!a) throw notFound(`no account ${acctId}`);
   const g = getGuardrailConfig(a.org_id, acctId);
   g.monthlyCapMinor = a.monthly_cap_minor;
   g.dailyCapMinor = a.daily_cap_minor;
@@ -280,10 +281,25 @@ export function getInsights(): Record<string, unknown>[] {
   return all(`SELECT vertical,platform,pattern_text,confidence,sample_size FROM insights WHERE scope='global' ORDER BY confidence DESC`);
 }
 
-/** Demo affordance: clear an account's actions/approvals so the loop can be re-run cleanly. */
+// Child rows (audit_log, approvals) reference actions(id), so they must be
+// removed before the actions they point at or the FK constraint fails.
+const UNDECIDED = "('proposed','queued')";
+
+/** Demo affordance: clear ALL of an account's actions, approvals and audit. */
 export function clearAccountActions(acctId: string): void {
+  run(`DELETE FROM audit_log WHERE action_id IN (SELECT id FROM actions WHERE ad_account_id=?)`, [acctId]);
   run(`DELETE FROM approvals WHERE action_id IN (SELECT id FROM actions WHERE ad_account_id=?)`, [acctId]);
   run(`DELETE FROM actions WHERE ad_account_id=?`, [acctId]);
+}
+
+/** Re-run affordance: clear only UNDECIDED proposals (and their proposal-stage
+ *  audit/approvals) so a fresh loop doesn't duplicate them, while preserving
+ *  executed/approved/rejected actions and their audit history. */
+export function clearUndecidedActions(acctId: string): void {
+  const sel = `SELECT id FROM actions WHERE ad_account_id=? AND status IN ${UNDECIDED}`;
+  run(`DELETE FROM audit_log WHERE action_id IN (${sel})`, [acctId]);
+  run(`DELETE FROM approvals WHERE action_id IN (${sel})`, [acctId]);
+  run(`DELETE FROM actions WHERE ad_account_id=? AND status IN ${UNDECIDED}`, [acctId]);
 }
 
 export function countByStatus(acctId: string): Record<string, number> {

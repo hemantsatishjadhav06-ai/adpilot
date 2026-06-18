@@ -12,6 +12,7 @@
     "loop": "node --experimental-strip-types --experimental-sqlite --no-warnings src/worker/loop.ts",
     "demo": "node --experimental-strip-types --experimental-sqlite --no-warnings scripts/demo.ts",
     "serve": "node --experimental-strip-types --experimental-sqlite --no-warnings src/api/server.ts",
+    "test": "node --experimental-strip-types --experimental-sqlite --no-warnings scripts/test.ts",
     "start": "npm run seed && npm run serve"
   },
   "dependencies": {},

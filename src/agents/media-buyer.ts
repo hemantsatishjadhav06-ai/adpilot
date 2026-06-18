@@ -7,6 +7,8 @@
 
 import type { AccountContext, ObjectLevel } from "../shared/types.ts";
 import { getConnector } from "../connectors/index.ts";
+import { checkKillSwitch } from "../guardrails/kill-switch.ts";
+import { blocked } from "../shared/errors.ts";
 import * as repo from "../db/repo.ts";
 import { log } from "../shared/logger.ts";
 
@@ -20,6 +22,18 @@ export async function executeAction(actionId: string): Promise<ExecResult> {
   const a = repo.getAction(actionId);
   if (!a) throw new Error(`no action ${actionId}`);
   const ctx: AccountContext = repo.getAccountContext(a.ad_account_id as string);
+
+  // ── Backstop: the guardrail engine gates EVERY write, even an already-approved
+  // one (Doc 03 §3, Doc 08 §8). State can change between proposal and execution
+  // (e.g. the kill switch is engaged), so re-check here at the true write boundary.
+  const ks = checkKillSwitch(ctx);
+  if (ks.verdict === "block") {
+    repo.updateActionStatus(actionId, "queued", { result: JSON.stringify({ ok: false, blocked: true, reasons: ks.reasons }) });
+    repo.audit(ctx.orgId, ctx.accountDbId, "system", "guardrail-engine", actionId, "blocked", null, { phase: "execute", reasons: ks.reasons });
+    log.warn("execution blocked by guardrail backstop", { actionId, reasons: ks.reasons });
+    throw blocked(ks.reasons.join("; "));
+  }
+
   const connector = getConnector(ctx.platform);
   const level = a.level as ObjectLevel;
   const targetExt = a.target_external_id as string;

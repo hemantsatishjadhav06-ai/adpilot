@@ -11,6 +11,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"          # latest 22.x
+      - name: Invariant tests (safety, guardrails, error handling)
+        run: npm test
       - name: Seed + run the OODA loop (no deps, dry-run)
         run: |
           node --experimental-strip-types --experimental-sqlite --no-warnings src/db/seed.ts
@@ -20,5 +22,5 @@ jobs:
           node --experimental-strip-types --experimental-sqlite --no-warnings src/api/server.ts &
           SRV=$!
           sleep 3
-          curl -fsS http://localhost:8787/api/accounts > /dev/null && echo "health OK"
+          curl -fsS http://localhost:8787/healthz > /dev/null && echo "health OK"
           kill $SRV
